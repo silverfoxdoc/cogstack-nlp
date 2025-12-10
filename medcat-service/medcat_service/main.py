@@ -1,3 +1,5 @@
+import medcat_service.utils.telemetry  # noqa , import to initialize telemetry before any other imports
+
 import logging
 import logging.config
 
