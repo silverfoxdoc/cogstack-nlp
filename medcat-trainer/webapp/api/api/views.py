@@ -278,27 +278,40 @@ def prepare_documents(request):
             with transaction.atomic():
                 # If the document is not already annotated, annotate it
                 if (len(anns) == 0 and not is_validated) or update:
-                    # Based on the project id get the right medcat
-                    cat = get_medcat(project=project)
-                    logger.info('loaded medcat model for project: %s', project.id)
-
-                    # Set CAT filters
-                    cat.config.components.linking.filters.cuis = cuis
-
-                    if not project.deid_model_annotation:
-                        spacy_doc = cat(document.text)
+                    if project.use_model_service:
+                        # Use remote model service
+                        logger.info('Using remote model service for project: %s', project.id)
+                        from .utils import call_remote_model_service, SimpleFilters
+                        spacy_doc = call_remote_model_service(project.model_service_url, document.text)
+                        filters = SimpleFilters(cuis=cuis)
+                        add_annotations(spacy_doc=spacy_doc,
+                                        user=user,
+                                        project=project,
+                                        document=document,
+                                        cat=None,
+                                        filters=filters,
+                                        similarity_threshold=0.3,
+                                        existing_annotations=anns)
                     else:
-                        deid = DeIdModel(cat)
-                        spacy_doc = deid(document.text)
+                        # Use local medcat model
+                        cat = get_medcat(project=project)
+                        logger.info('loaded medcat model for project: %s', project.id)
 
-                    spacy_doc = cat(document.text)
+                        # Set CAT filters
+                        cat.config.components.linking.filters.cuis = cuis
 
-                    add_annotations(spacy_doc=spacy_doc,
-                                    user=user,
-                                    project=project,
-                                    document=document,
-                                    cat=cat,
-                                    existing_annotations=anns)
+                        if not project.deid_model_annotation:
+                            spacy_doc = cat(document.text)
+                        else:
+                            deid = DeIdModel(cat)
+                            spacy_doc = deid(document.text)
+
+                        add_annotations(spacy_doc=spacy_doc,
+                                        user=user,
+                                        project=project,
+                                        document=document,
+                                        cat=cat,
+                                        existing_annotations=anns)
 
                 # add doc to prepared_documents
                 project.prepared_documents.add(document)
@@ -382,15 +395,12 @@ def add_annotation(request):
     user = request.user
     project = ProjectAnnotateEntities.objects.get(id=p_id)
     document = Document.objects.get(id=d_id)
-
-    cat = get_medcat(project=project)
     id = create_annotation(source_val=source_val,
                            selection_occurrence_index=sel_occur_idx,
                            cui=cui,
                            user=user,
                            project=project,
-                           document=document,
-                           cat=cat)
+                           document=document)
     logger.debug('Annotation added.')
     return Response({'message': 'Annotation added successfully', 'id': id})
 
@@ -414,6 +424,14 @@ def add_concept(request):
     user = request.user
     project = ProjectAnnotateEntities.objects.get(id=p_id)
     document = Document.objects.get(id=d_id)
+
+    if project.use_model_service:
+        # Use remote model service
+        logger.error('Adding concepts is not supported for remote model service'\
+                     'projects, you likely want to use a local model')
+        raise NotImplementedError('Adding concepts is not supported for remote model service projects')
+
+
     cat = get_medcat(project=project)
 
     if cui in cat.cdb.cui2names:
@@ -463,8 +481,13 @@ def import_cdb_concepts(request):
 
 def _submit_document(project: ProjectAnnotateEntities, document: Document):
     if project.train_model_on_submit:
-        cat = get_medcat(project=project)
-        train_medcat(cat, project, document)
+        if project.use_model_service:
+            # TODO: Implement this, already available in CMS / gateway instances.
+            # interim model training not supported for remote model service projects
+           logger.warning('Interim model training is not supported for remote model service projects')
+        else:
+            cat = get_medcat(project=project)
+            train_medcat(cat, project, document)
 
     # Add cuis to filter if they did not exist
     cuis = []
