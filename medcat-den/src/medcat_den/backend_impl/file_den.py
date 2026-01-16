@@ -152,6 +152,10 @@ class LocalFileDen(Den):
                                          ) -> list[ModelInfo]:
         return self._sqlite.list_derivatives(model.model_id)
 
+    def has_model(self, model: ModelInfo,
+                  backend_name: Optional[str] = None) -> bool:
+        return bool(self._sqlite.get_model(model.model_id))
+
     def _get_model_zip_name(self, model_hash: str) -> str:
         return f"{model_hash}.zip"
 
@@ -170,13 +174,6 @@ class LocalFileDen(Den):
             CATWrapper,
             CATWrapper.load_model_pack(model_path, model_info=model_info,
                                        den_cnf=self._cnf))
-
-    def has_model(self, model_info: ModelInfo) -> bool:
-        # TODO: improve! Is there an API endpoint to call?
-        for model in self.list_available_base_models():
-            if model.model_id == model_info.model_id:
-                return True
-        return False
 
     def push_model(self, cat: CAT, description: str,
                    backend_name: Optional[str] = None,
@@ -223,6 +220,16 @@ class LocalFileDen(Den):
                               backend_name: Optional[str] = None) -> None:
         # NOTE: for local file den this is not needed, but will still be called
         pass
+
+    def move_model(den, model_info: ModelInfo, origin: str, destination: str) -> None:
+        raise UnsupportedAPIException(
+            "The move_model method can only be called on a multi-backend den "
+            "not the individidual back ends")
+
+    def sync_backend(self, origin: str, destination: str) -> None:
+        raise UnsupportedAPIException(
+            "The move_model method can only be called on a multi-backend den "
+            "not the individidual back ends")
 
     def delete_model(self, model_info: ModelInfo,
                      allow_delete_base_models: bool = False,

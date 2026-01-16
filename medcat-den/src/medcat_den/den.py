@@ -1,4 +1,5 @@
 from typing import Protocol, Optional, runtime_checkable, Union
+import logging
 
 from medcat.cat import CAT
 from medcat.data.mctexport import MedCATTrainerExport
@@ -7,6 +8,8 @@ from medcat_den.base import ModelInfo
 from medcat_den.wrappers import CATWrapper
 from medcat_den.backend import DenType
 
+
+logger = logging.getLogger(__name__)
 
 @runtime_checkable
 class DenBackend(Protocol):
@@ -58,6 +61,20 @@ class DenBackend(Protocol):
 
         Returns:
             list[ModelInfo]: The available deriative models.
+        """
+
+    def has_model(self, model: ModelInfo,
+                  backend_name: Optional[str] = None) -> bool:
+        """Whether the back end in question has the specified model.
+
+        This method generally only compares the model ID / hash.
+
+        Args:
+            model (ModelInfo): The model info.
+            backend_name (Optional[str]): The back end name. Defaults to None.
+
+        Returns:
+            bool: Whether the model is in the back end or not.
         """
 
     def fetch_model(self, model_info: ModelInfo,
@@ -182,6 +199,42 @@ class DenBackend(Protocol):
         """
         pass
 
+    def move_model(self, model_info: ModelInfo, origin: str, destination: str) -> None:
+        """Move a model from the origin to the destination.
+
+        This method is designed to only work with multiple back end and will likely
+        raise an exception if used on a specific back end.
+
+        Raises:
+            NoSuchBackendException: If one of the back ends does not exist.
+            NoSuchModel: If the model does not exist at the origin.
+            UnsupportedAPIException: If called on a specific back end.
+            DuplicateModelException: If the destination already has the model.
+
+        Args:
+            model_info (ModelInfo): The model in question.
+            origin (str): The origin back end.
+            destination (str): The destination back end.
+        """
+        pass
+
+
+    def sync_backend(self, origin: str, destination: str) -> None:
+        """Sync models from one backend to another.
+
+        This method is designed to only work with multiple back end and will likely
+        raise an exception if used on a specific back end.
+
+        Raises:
+            NoSuchBackendException: If one of the back ends does not exist.
+            UnsupportedAPIException: If called on a specific back end.
+
+        Args:
+            origin (str): The origin back end.
+            destination (str): The destination back end.
+        """
+        pass
+
 
 class Den(DenBackend):
 
@@ -215,6 +268,10 @@ class Den(DenBackend):
     def list_available_derivative_models(self, model: ModelInfo, backend_name: Optional[str] = None) -> list[ModelInfo]:
         return self._get_backend(backend_name).list_available_derivative_models(model)
 
+    def has_model(self, model: ModelInfo,
+                  backend_name: Optional[str] = None) -> bool:
+        return self._get_backend(backend_name).has_model(model)
+
     def fetch_model(self, model_info: ModelInfo, backend_name: Optional[str] = None) -> CATWrapper:
         return self._get_backend(backend_name).fetch_model(model_info)
 
@@ -234,6 +291,36 @@ class Den(DenBackend):
     def evaluate_model(self, model_info: ModelInfo, data: Union[list[str], MedCATTrainerExport], backend_name: Optional[str] = None) -> dict:
         return self._get_backend(backend_name).evaluate_model(model_info, data)
 
+    def move_model(self, model_info: ModelInfo, origin: str, destination: str) -> None:
+        if origin not in self._backends:
+            raise NoSuchBackendException(f"No backend: '{origin}'")
+        if destination not in self._backends:
+            raise NoSuchBackendException(f"No backend: '{destination}'")
+        if not self.has_model(model_info, backend_name=origin):
+            raise NoSuchModel(model_info, origin)
+        if self.has_model(model_info, backend_name=destination):
+            raise DuplicateModelException(
+                "Model %s already exists in %s", model_info.model_id, destination)
+        logger.info("Fetching model %s from %s ...", model_info.model_id, origin)
+        model = self.fetch_model(model_info, backend_name=origin)
+        logger.info("Pushing model %s to %s ...", model_info.model_id, destination)
+        self.push_model(model, "Base model", backend_name=destination)
+
+    def sync_backend(self, origin: str, destination: str) -> None:
+        if origin not in self._backends:
+            raise NoSuchBackendException(f"No backend: '{origin}'")
+        if destination not in self._backends:
+            raise NoSuchBackendException(f"No backend: '{destination}'")
+        dest_model_ids = {model.model_id for model in
+                          self.list_available_models(destination)}
+        for model in self.list_available_models(origin):
+            if model.model_id in dest_model_ids:
+                continue
+            self.move_model(model, origin, destination)
+
+
+class NoSuchBackendException(ValueError):
+    pass
 
 class UnsupportedAPIException(ValueError):
     pass
@@ -306,3 +393,11 @@ class DuplicateModelException(ValueError):
 
     def __init__(self, *args):
         super().__init__(*args)
+
+class NoSuchModel(ValueError):
+
+    def __init__(self, model_info: ModelInfo,
+                 backend_name: str, extra: str = '') -> None:
+        super().__init__(
+            f"Could not find model {model_info.model_id} "
+            f"in backend '{backend_name}'. {extra}")
