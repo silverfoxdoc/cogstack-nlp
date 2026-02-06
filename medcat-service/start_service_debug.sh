@@ -12,6 +12,7 @@ if [ -z "${APP_MODEL_CDB_PATH}" ] && [ -z "${APP_MODEL_VOCAB_PATH}" ] && [ -z "$
 fi
 
 export APP_ENABLE_METRICS=${APP_ENABLE_METRICS:-True}
+export APP_ENABLE_DEMO_UI=${APP_ENABLE_DEMO_UI:-True}
 
 if [ "${HOT_MODULE_RELOADING}" = "True" ]; then
   # Experimental: Hot module reloading. Need to `pip install -r requirements-dev.txt`
