@@ -8,6 +8,7 @@ medcat/v2.2.3 for instance.
 import importlib.metadata
 import tempfile
 import zipfile
+import os
 import sys
 from pathlib import Path
 import requests
@@ -77,12 +78,13 @@ def _determine_url(overwrite_url: str | None,
     return zip_url
 
 
-def _download_zip(zip_url: str, tmp: tempfile._TemporaryFileWrapper):
-    with requests.get(zip_url, stream=True, timeout=30) as r:
-        r.raise_for_status()
-        for chunk in r.iter_content(chunk_size=8192):
-            tmp.write(chunk)
-        tmp.flush()
+def _download_zip(zip_url: str, tmp_path: str):
+    with open(tmp_path, 'wb') as tmp:
+        with requests.get(zip_url, stream=True, timeout=30) as r:
+            r.raise_for_status()
+            for chunk in r.iter_content(chunk_size=8192):
+                tmp.write(chunk)
+            tmp.flush()
 
 
 def _extract_zip(dest: Path, zip_path: Path):
@@ -146,9 +148,10 @@ def fetch_scripts(destination: str | Path = ".",
     dest.mkdir(parents=True, exist_ok=True)
 
     zip_url = _determine_url(overwrite_url, overwrite_tag)
-    with tempfile.NamedTemporaryFile() as tmp:
-        _download_zip(zip_url, tmp)
-        _extract_zip(dest, Path(tmp.name))
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        zip_path = os.path.join(tmp_dir, 'downloaded_scripts.zip')
+        _download_zip(zip_url, zip_path)
+        _extract_zip(dest, Path(zip_path))
     _fix_requirements(dest, _get_medcat_version())
     logger.info(
         "You also need to install the requiements by doing:\n"
