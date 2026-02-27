@@ -1,10 +1,6 @@
-version: '3.4'
-
 services:
   medcatweb:
-    build:
-        network: host
-        context: ./webapp
+    image: cogstacksystems/medcat-model-distributor
     command: >
       bash -c "
           python manage.py migrate --noinput &&

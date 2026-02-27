@@ -17,24 +17,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsqlite3-dev
 
 
-# Install Python dependencies
-ARG USE_CPU_TORCH=false
-# NOTE: Allow building without GPU so as to lower image size (disabled by default)
-RUN pip install -U pip && if [ "$USE_CPU_TORCH" = "true" ]; then \
-                              pip install -r /webapp/requirements.txt --extra-index-url https://download.pytorch.org/whl/cpu/; \
-                          else \
-                              pip install -r /webapp/requirements.txt; \
-                          fi
-
-# NOTE: for test/CI time, this will install medcat based on local path
-ARG REINSTALL_CORE_FROM_LOCAL=false
-RUN if [ "$REINSTALL_CORE_FROM_LOCAL" = "true" ]; then \
-        echo "Reinstalling medcat based on relative path"; \
-        SETUPTOOLS_SCM_PRETEND_VERSION="2.4.0-dev0" pip install -e "/webapp/medcat-v2[meta-cat,spacy]"; \
-    fi
-
-# Get the spacy model (for later copy)
-RUN python -m spacy download en_core_web_md
+RUN pip install -U pip && pip install -r /webapp/requirements.txt
 
 # Stage 2: Final (production) image
 FROM python:3.12-slim AS final
