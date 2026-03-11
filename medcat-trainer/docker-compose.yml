@@ -4,7 +4,7 @@
 services:
   # medattrainer services
   medcattrainer:
-    image: cogstacksystems/medcat-trainer:v3.4.1
+    image: cogstacksystems/medcat-trainer:latest
     restart: always
     volumes:
       - api-media:/home/api/media
@@ -13,6 +13,8 @@ services:
       - api-db-backup:/home/api/db-backup
       - ./configs:/home/configs
       - ./supervisord.conf:/etc/supervisord.conf
+      - ./utils.py:/home/api/api/utils.py
+      - ./views.py:/home/api/api/views.py
     env_file:
       - ./envs/env
     environment:
