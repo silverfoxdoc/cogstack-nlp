@@ -13,8 +13,8 @@ services:
       - api-db-backup:/home/api/db-backup
       - ./configs:/home/configs
       - ./supervisord.conf:/etc/supervisord.conf
-      - ./utils.py:/home/api/api/utils.py
-      - ./views.py:/home/api/api/views.py
+      - ./webapp/api/api/utils.py:/home/api/api/utils.py
+      - ./webapp/api/api/views.py:/home/api/api/views.py
     env_file:
       - ./envs/env
     environment:
