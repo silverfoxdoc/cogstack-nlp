@@ -8,6 +8,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+          token: ${{ secrets.AUTOMATION_WORKFLOW_PAT }}
       - name: Mirror Upstream
         uses: repo-sync/github-sync@v2
         env:
