@@ -7,6 +7,7 @@ jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v6
       - name: Mirror Upstream
         uses: repo-sync/github-sync@v2
         env:
