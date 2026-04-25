@@ -1,19 +1,16 @@
 name: Mirror Upstream
-
 on:
   schedule:
     - cron: "0 3 * * *"
   workflow_dispatch:
-
 jobs:
   mirror:
     runs-on: ubuntu-latest
-
     steps:
-      - uses: actions/checkout@v6
-
       - name: Mirror Upstream
         uses: repo-sync/github-sync@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.AUTOMATION_WORKFLOW_PAT }}
         with:
           source_repo: "https://github.com/cogstack/cogstack-nlp.git"
           source_branch: "main"
