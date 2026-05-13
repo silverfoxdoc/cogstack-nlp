@@ -15,7 +15,7 @@ from medcat.data.mctexport import (
     MedCATTrainerExport, MedCATTrainerExportAnnotation, MedCATTrainerExportProject,
     MedCATTrainerExportDocument, count_all_annotations, iter_anns)
 from medcat.preprocessors.cleaners import prepare_name, NameDescriptor
-from medcat.components.types import CoreComponentType, TrainableComponent
+from medcat.components.types import TrainableComponent
 from medcat.components.addons.addons import AddonComponent
 from medcat.pipeline import Pipeline
 
@@ -64,10 +64,8 @@ class Trainer:
         with self.config.meta.prepare_and_report_training(
             data_iterator, nepochs, False
         ) as wrapped_iter:
-            with temp_changed_config(self.config.components.linking,
-                                     'train', True):
-                self._train_unsupervised(wrapped_iter, nepochs, fine_tune,
-                                         progress_print)
+            self._train_unsupervised(wrapped_iter, nepochs, fine_tune,
+                                     progress_print)
 
     def _train_unsupervised(self,
                             data_iterator: Iterable,
@@ -91,11 +89,18 @@ class Trainer:
                 # Convert to string
                 line = str(line).strip()
 
+
+                # inference run for the document
                 try:
-                    _ = self.caller(line)
+                    doc = self.caller(line)
                 except Exception as e:
                     logger.warning("LINE: '%s...' \t WAS SKIPPED", line[0:100])
                     logger.warning("BECAUSE OF:", exc_info=e)
+                    continue
+                for comp in self._pipeline.iter_all_components():
+                    if isinstance(comp, TrainableComponent):
+                        logger.debug("Training on component %s", comp.full_name)
+                        comp.train_unsupervised(doc)
             else:
                 logger.warning("EMPTY LINE WAS DETECTED AND SKIPPED")
 
@@ -632,18 +637,15 @@ class Trainer:
 
         if mut_entity is None or mut_doc is None:
             return
-        linker = self._pipeline.get_component(
-            CoreComponentType.linking)
-        if not isinstance(linker, TrainableComponent):
-            logger.warning(
-                "Linker cannot be trained during add_and_train_concept"
-                "because it has no train method: %s", linker)
-        else:
+        trained_comps = 0
+        for component in self._pipeline.iter_all_components():
+            if not isinstance(component, TrainableComponent):
+                continue
             # Train Linking
             if isinstance(mut_entity, list):
                 mut_entity = self._pipeline.entity_from_tokens(mut_entity)
-            linker.train(cui=cui, entity=mut_entity, doc=mut_doc,
-                         negative=negative, names=names)
+            component.train(cui=cui, entity=mut_entity, doc=mut_doc,
+                            negative=negative, names=names)
 
             if not negative and devalue_others:
                 # Find all cuis
@@ -658,8 +660,12 @@ class Trainer:
                 # Add negative training for all other CUIs that link to
                 # these names
                 for _cui in cuis:
-                    linker.train(cui=_cui, entity=mut_entity, doc=mut_doc,
-                                 negative=True)
+                    component.train(cui=_cui, entity=mut_entity, doc=mut_doc,
+                                    negative=True)
+        if trained_comps == 0:
+            logger.warning(
+                "Nothing was trained during add_and_train_concept because "
+                "no components followed the TrainableComponent protocol")
 
     @property
     def _pn_configs(self) -> tuple[General, Preprocessing, CDBMaker]:
