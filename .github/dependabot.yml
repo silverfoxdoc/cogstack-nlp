@@ -9,7 +9,7 @@ updates:
  - package-ecosystem: "devcontainers"
    directory: "/"
    commit-message:
-     prefix: "chore: "
+     prefix: "build: "
    schedule:
      interval: weekly
  - package-ecosystem: "github-actions"
@@ -28,6 +28,11 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(anoncat-demo-app): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      pip-deps:
        patterns:
@@ -38,8 +43,33 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(anoncat-demo-app): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      pip-deps:
+       patterns:
+        - "*"
+ - package-ecosystem: "npm"
+   directory: "/anoncat-demo-app/app/frontend"
+   schedule:
+     interval: "weekly"
+   commit-message:
+     prefix: "build(anoncat-demo-app): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
+   groups:
+     npm-deps:
+       applies-to: version-updates
+       patterns:
+        - "*"
+     npm-security-deps:
+       applies-to: security-updates
        patterns:
         - "*"
  - package-ecosystem: "pip"
@@ -48,6 +78,11 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(cogstack-es): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      pip-deps:
        patterns:
@@ -58,6 +93,11 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(medcat-den): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      pip-deps:
        patterns:
@@ -68,6 +108,11 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(medcat-model-distributor): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      pip-deps:
        patterns:
@@ -78,6 +123,11 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(medcat-plugins): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      pip-deps:
        patterns:
@@ -88,6 +138,11 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(medcat-plugins): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      pip-deps:
        patterns:
@@ -98,6 +153,11 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(medcat-scripts): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      pip-deps:
        patterns:
@@ -108,6 +168,11 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(medcat-service): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      pip-deps:
        patterns:
@@ -118,6 +183,11 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(medcat-trainer): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      pip-deps:
        patterns:
@@ -128,8 +198,38 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(medcat-trainer): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      uv-deps:
+       applies-to: version-updates
+       patterns:
+        - "*"
+     uv-security-deps:
+       applies-to: security-updates
+       patterns:
+        - "*"
+ - package-ecosystem: "npm"
+   directory: "/medcat-trainer/webapp/frontend"
+   schedule:
+     interval: "weekly"
+   commit-message:
+     prefix: "build(medcat-trainer): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
+   groups:
+     npm-deps:
+       applies-to: version-updates
+       patterns:
+        - "*"
+     npm-security-deps:
+       applies-to: security-updates
        patterns:
         - "*"
  - package-ecosystem: "uv"
@@ -138,8 +238,18 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(medcat): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      uv-deps:
+       applies-to: version-updates
+       patterns:
+        - "*"
+     uv-security-deps:
+       applies-to: security-updates
        patterns:
         - "*"
  - package-ecosystem: "uv"
@@ -148,7 +258,17 @@ updates:
      interval: "weekly"
    commit-message:
      prefix: "build(medcat-tutorials): "
+   allow:
+     - dependency-name: "*"
+       update-types:
+         - "version-update:semver-patch"
+         - "version-update:semver-minor"
    groups:
      uv-deps:
+       applies-to: version-updates
+       patterns:
+        - "*"
+     uv-security-deps:
+       applies-to: security-updates
        patterns:
         - "*"
