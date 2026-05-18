@@ -1,4 +1,4 @@
-from typing import Iterable, Callable, Optional, Union, cast
+from typing import Iterable, Optional, Union, cast
 import logging
 import tempfile
 from itertools import chain, repeat, islice
@@ -28,11 +28,10 @@ logger = logging.getLogger(__name__)
 class Trainer:
     strict_train: bool = False
 
-    def __init__(self, cdb: CDB, caller: Callable[[str], MutableDocument],
+    def __init__(self, cdb: CDB,
                  pipeline: Pipeline):
         self.cdb = cdb
         self.config = cdb.config
-        self.caller = caller
         self._pipeline = pipeline
 
     def train_unsupervised(self,
@@ -92,7 +91,7 @@ class Trainer:
 
                 # inference run for the document
                 try:
-                    doc = self.caller(line)
+                    doc = self._pipeline.get_doc(line)
                 except Exception as e:
                     logger.warning("LINE: '%s...' \t WAS SKIPPED", line[0:100])
                     logger.warning("BECAUSE OF:", exc_info=e)
@@ -416,7 +415,19 @@ class Trainer:
         for ann in anns:
             tkns = doc.get_tokens(ann['start'], ann['end'])
             try:
-                ents.append(self._pipeline.entity_from_tokens_in_doc(tkns, doc))
+                ent = self._pipeline.entity_from_tokens_in_doc(tkns, doc)
+                pn_dict = prepare_name(ann['value'], self._pipeline.tokenizer, {},
+                                 self._pn_configs)
+                processed_names = list(pn_dict.keys())
+                if len(processed_names) > 1:
+                    logger.info("Got multiple processed names for %s: %s",
+                                ann['value'], processed_names)
+                elif not processed_names:
+                    # NOTE: shouldn't really happen
+                    raise ValueError(f"Could not process {ann['value']} into names")
+                ent.detected_name = processed_names[0]
+                ent.cui = ann['cui']
+                ents.append(ent)
             except ValueError as err:
                 self._warn_on_error(
                     err, doc.base.text,
@@ -471,7 +482,8 @@ class Trainer:
             doc = docs[idx_doc]
             with temp_changed_config(self.config.components.linking,
                                      'train', False):
-                mut_doc = self.caller(doc['text'])
+                # NOTE: only need tokenization here
+                mut_doc = self._pipeline.tokenizer_with_tag(doc['text'])
             self._prepare_doc_with_anns(mut_doc, doc, doc['annotations'])
 
             # Compatibility with old output where annotations are a list
@@ -646,6 +658,7 @@ class Trainer:
                 mut_entity = self._pipeline.entity_from_tokens(mut_entity)
             component.train(cui=cui, entity=mut_entity, doc=mut_doc,
                             negative=negative, names=names)
+            trained_comps += 1
 
             if not negative and devalue_others:
                 # Find all cuis
